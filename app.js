@@ -4,7 +4,7 @@ let currentKanjiList = [];
 
 function getRandomKanji() {
   if (currentKanjiList.length === 0) {
-    return { character: "Loading...", meaning: "Please wait" };
+    return null;
   }
   const idx = Math.floor(Math.random() * currentKanjiList.length);
   return currentKanjiList[idx];
@@ -12,17 +12,20 @@ function getRandomKanji() {
 
 function showKanji() {
   currentKanji = getRandomKanji();
-  document.getElementById("kanji-character").textContent = currentKanji.character;
-  document.getElementById("kanji-meaning").textContent = ""; // Clear previous meaning
 
-  if (currentKanjiList.length === 0 && currentKanji.character !== "Loading...") {
-     document.getElementById("kanji-character").textContent = "Error";
-     document.getElementById("kanji-meaning").textContent = "Failed to load Kanji data.";
+  if (currentKanji === null) {
+    document.getElementById("kanji-character").textContent = "Error";
+    document.getElementById("kanji-meaning").textContent = "No Kanji found for this level, or failed to load data.";
+  } else {
+    document.getElementById("kanji-character").textContent = currentKanji.character;
+    document.getElementById("kanji-meaning").textContent = ""; // Clear previous meaning
+
   }
 }
 
 function showMeaning() {
-  if (currentKanji && currentKanji.meaning !== "Please wait" && currentKanji.meaning !== "Failed to load Kanji data.") {
+  if (currentKanji && currentKanji.meaning && currentKanji.character !== "Error") {
+
     document.getElementById("kanji-meaning").textContent = currentKanji.meaning;
   }
 }
