@@ -12,17 +12,20 @@ function getRandomKanji() {
 
 function showKanji() {
   currentKanji = getRandomKanji();
+
   if (currentKanji === null) {
     document.getElementById("kanji-character").textContent = "Error";
     document.getElementById("kanji-meaning").textContent = "No Kanji found for this level, or failed to load data.";
   } else {
     document.getElementById("kanji-character").textContent = currentKanji.character;
     document.getElementById("kanji-meaning").textContent = ""; // Clear previous meaning
+
   }
 }
 
 function showMeaning() {
   if (currentKanji && currentKanji.meaning && currentKanji.character !== "Error") {
+
     document.getElementById("kanji-meaning").textContent = currentKanji.meaning;
   }
 }
