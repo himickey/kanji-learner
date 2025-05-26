@@ -5,7 +5,7 @@ const path = require("path");
 
 const app = express();
 const PORT = process.env.PORT || 3001;
- 
+
 // Serve static files from the current directory
 app.use(express.static(__dirname));
 app.use(cors());

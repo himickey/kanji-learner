@@ -52,3 +52,15 @@ button {
 button:hover {
   background: #1565c0;
 }
+
+kanji-learner/styles.css
+/* Add these styles to your existing CSS file */
+#kanji-character {
+  transition: transform 0.2s ease, color 0.2s ease;
+  cursor: pointer;
+}
+
+#kanji-character:hover {
+  transform: scale(1.05);
+  color: #0078d7;
+}
