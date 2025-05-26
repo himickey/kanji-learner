@@ -36,7 +36,7 @@ async function changeLevel(level) {
   document.getElementById("kanji-meaning").textContent = "";
 
   try {
-    const response = await fetch(`/api/kanji?level=${level}`);
+    const response = await fetch(`http://localhost:3001/api/kanji?level=${level}`);
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }

@@ -6,8 +6,14 @@ const path = require("path");
 const app = express();
 const PORT = 3001;
  
-
+// Serve static files from the current directory
+app.use(express.static(__dirname));
 app.use(cors());
+
+// Serve index.html for the root route
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
+});
 
 const levelToFile = {
   N5: "n5-vocab-kanji-eng.anki.html",
