@@ -4,7 +4,7 @@ const fs = require("fs");
 const path = require("path");
 
 const app = express();
-const PORT = 3001;
+const PORT = process.env.PORT || 3001;
  
 // Serve static files from the current directory
 app.use(express.static(__dirname));
@@ -61,5 +61,5 @@ app.get("/api/kanji", async (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`Kanji API server running on http://localhost:${PORT}`);
+  console.log(`Kanji API server running on port ${PORT}`);
 });
