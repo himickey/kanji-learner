@@ -1,5 +1,6 @@
 let currentKanji = null;
 let currentLevel = "N5";
+let isMeaningVisible = false; // Track if meaning is currently shown
 
 // Map JLPT levels to API numeric values
 const levelMapping = {
@@ -46,7 +47,36 @@ async function showKanji() {
     kanjiCharEl.title = "Click to hear pronunciation";
     kanjiCharEl.style.cursor = "pointer";
     
-    document.getElementById("kanji-meaning").textContent = ""; // Clear previous meaning
+    // If meaning was visible before, show it for the new kanji too
+    if (isMeaningVisible) {
+      updateMeaningDisplay();
+    } else {
+      document.getElementById("kanji-meaning").textContent = ""; // Clear previous meaning
+    }
+  }
+}
+
+function updateMeaningDisplay() {
+  if (currentKanji && currentKanji.character !== "Error") {
+    // Handle different possible property names from the API
+    const meaning = currentKanji.meaning || currentKanji.meanings || currentKanji.definition || "No meaning available";
+    document.getElementById("kanji-meaning").textContent = meaning;
+  }
+}
+
+function toggleMeaning() {
+  const showAnswerBtn = document.getElementById("show-answer");
+  
+  if (isMeaningVisible) {
+    // Hide meaning
+    isMeaningVisible = false;
+    document.getElementById("kanji-meaning").textContent = "";
+    showAnswerBtn.textContent = "Show Meaning";
+  } else {
+    // Show meaning
+    isMeaningVisible = true;
+    updateMeaningDisplay();
+    showAnswerBtn.textContent = "Hide Meaning";
   }
 }
 
@@ -181,11 +211,15 @@ async function changeLevel(level) {
   document.getElementById("kanji-character").textContent = "Loading...";
   document.getElementById("kanji-meaning").textContent = "";
 
+  // Reset button text when changing levels
+  const showAnswerBtn = document.getElementById("show-answer");
+  showAnswerBtn.textContent = isMeaningVisible ? "Hide Meaning" : "Show Meaning";
+
   // No need to pre-fetch data since we get random kanji on demand
   showKanji();
 }
 
-document.getElementById("show-answer").addEventListener("click", showMeaning);
+document.getElementById("show-answer").addEventListener("click", toggleMeaning);
 document.getElementById("next-kanji").addEventListener("click", showKanji);
 document.getElementById("jlpt-level").addEventListener("change", function (e) {
   changeLevel(e.target.value);
