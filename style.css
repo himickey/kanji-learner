@@ -86,10 +86,25 @@ button:hover {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
 
 .audio-btn:hover {
   background: #45a049;
+  transform: scale(1.1);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+}
+
+/* Add loading state for TTS */
+.audio-btn.loading {
+  background: #ff9800;
+  animation: pulse 1s infinite;
+}
+
+.audio-btn.playing {
+  background: #2196f3;
+  animation: pulse 1s infinite;
 }
 
 select {

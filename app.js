@@ -58,8 +58,8 @@ function showMeaning() {
   }
 }
 
-// Function to speak the kanji reading aloud
-function speakKanji() {
+// Function to speak the kanji reading aloud using Google Text-to-Speech
+async function speakKanji() {
   if (currentKanji) {
     // Handle different possible property names for readings
     let reading = null;
@@ -78,25 +78,99 @@ function speakKanji() {
     }
     
     if (reading) {
-      // Check if speech synthesis is available
-      if ('speechSynthesis' in window) {
-        // Create a new speech synthesis utterance
-        const utterance = new SpeechSynthesisUtterance(reading);
-        utterance.lang = 'ja-JP'; // Set language to Japanese
-        
-        // Speak the utterance
-        window.speechSynthesis.speak(utterance);
-        
-        // Visual feedback that audio is playing
+      try {
+        // Visual feedback that audio is loading/playing
         const kanjiEl = document.getElementById("kanji-character");
+        const audioBtn = document.getElementById("play-audio");
         const originalColor = kanjiEl.style.color;
-        kanjiEl.style.color = '#0078d7';
         
-        utterance.onend = () => {
-          kanjiEl.style.color = originalColor;
+        // Set loading state
+        kanjiEl.style.color = '#ff9800';
+        if (audioBtn) {
+          audioBtn.classList.add('loading');
+          audioBtn.textContent = '⏳';
+        }
+        
+        // Use Google Translate's TTS service
+        // This creates a URL that returns an audio file from Google's TTS
+        const ttsUrl = `https://translate.google.com/translate_tts?ie=UTF-8&tl=ja&client=tw-ob&q=${encodeURIComponent(reading)}`;
+        
+        // Create and play audio element
+        const audio = new Audio(ttsUrl);
+        
+        // Handle audio events
+        audio.onloadstart = () => {
+          console.log('Loading Google TTS audio...');
         };
-      } else {
-        console.warn("Speech synthesis not supported in this browser");
+        
+        audio.oncanplay = () => {
+          console.log('Google TTS audio ready to play');
+          // Set playing state
+          kanjiEl.style.color = '#0078d7';
+          if (audioBtn) {
+            audioBtn.classList.remove('loading');
+            audioBtn.classList.add('playing');
+            audioBtn.textContent = '▶️';
+          }
+        };
+        
+        audio.onended = () => {
+          kanjiEl.style.color = originalColor;
+          if (audioBtn) {
+            audioBtn.classList.remove('loading', 'playing');
+            audioBtn.textContent = '🔊';
+          }
+          console.log('Google TTS audio finished');
+        };
+        
+        audio.onerror = (error) => {
+          console.error('Google TTS audio error:', error);
+          kanjiEl.style.color = originalColor;
+          if (audioBtn) {
+            audioBtn.classList.remove('loading', 'playing');
+            audioBtn.textContent = '🔊';
+          }
+          
+          // Fallback to browser speech synthesis
+          if ('speechSynthesis' in window) {
+            console.log('Falling back to browser speech synthesis');
+            const utterance = new SpeechSynthesisUtterance(reading);
+            utterance.lang = 'ja-JP';
+            utterance.onend = () => {
+              kanjiEl.style.color = originalColor;
+            };
+            window.speechSynthesis.speak(utterance);
+          }
+        };
+        
+        // Play the audio
+        await audio.play();
+        
+      } catch (error) {
+        console.error('Failed to play Google TTS audio:', error);
+        
+        // Reset visual states
+        const kanjiEl = document.getElementById("kanji-character");
+        const audioBtn = document.getElementById("play-audio");
+        const originalColor = kanjiEl.style.color;
+        kanjiEl.style.color = originalColor;
+        if (audioBtn) {
+          audioBtn.classList.remove('loading', 'playing');
+          audioBtn.textContent = '🔊';
+        }
+        
+        // Fallback to browser speech synthesis
+        if ('speechSynthesis' in window) {
+          console.log('Falling back to browser speech synthesis');
+          const utterance = new SpeechSynthesisUtterance(reading);
+          utterance.lang = 'ja-JP';
+          utterance.onend = () => {
+            kanjiEl.style.color = originalColor;
+          };
+          window.speechSynthesis.speak(utterance);
+        } else {
+          console.warn("Neither Google TTS nor browser speech synthesis available");
+        }
       }
     }
   }
@@ -117,7 +191,8 @@ document.getElementById("jlpt-level").addEventListener("change", function (e) {
   changeLevel(e.target.value);
 });
 
-// Replace the kanji character click listener with this
+// Add audio event listeners for both kanji character and audio button
+document.getElementById("kanji-character").addEventListener("click", speakKanji);
 document.getElementById("play-audio").addEventListener("click", speakKanji);
 
 // Initialize with a kanji
