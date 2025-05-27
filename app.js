@@ -89,8 +89,24 @@ function showMeaning() {
 }
 
 // Function to speak the kanji reading aloud using Google Text-to-Speech
-async function speakKanji() {
-  if (currentKanji) {
+let isCurrentlyPlaying = false; // Prevent multiple simultaneous audio playbacks
+let currentAudio = null; // Keep track of current audio instance
+
+async function speakKanji(event) {
+  // Prevent event bubbling to avoid double triggers
+  if (event) {
+    event.stopPropagation();
+  }
+  
+  if (currentKanji && !isCurrentlyPlaying) {
+    isCurrentlyPlaying = true;
+    
+    // Stop any currently playing audio
+    if (currentAudio) {
+      currentAudio.pause();
+      currentAudio = null;
+    }
+    
     // Handle different possible property names for readings
     let reading = null;
     
@@ -111,22 +127,17 @@ async function speakKanji() {
       try {
         // Visual feedback that audio is loading/playing
         const kanjiEl = document.getElementById("kanji-character");
-        const audioBtn = document.getElementById("play-audio");
         const originalColor = kanjiEl.style.color;
         
         // Set loading state
         kanjiEl.style.color = '#ff9800';
-        if (audioBtn) {
-          audioBtn.classList.add('loading');
-          audioBtn.textContent = '⏳';
-        }
         
         // Use Google Translate's TTS service
-        // This creates a URL that returns an audio file from Google's TTS
         const ttsUrl = `https://translate.google.com/translate_tts?ie=UTF-8&tl=ja&client=tw-ob&q=${encodeURIComponent(reading)}`;
         
         // Create and play audio element
         const audio = new Audio(ttsUrl);
+        currentAudio = audio; // Store reference to current audio
         
         // Handle audio events
         audio.onloadstart = () => {
@@ -137,29 +148,20 @@ async function speakKanji() {
           console.log('Google TTS audio ready to play');
           // Set playing state
           kanjiEl.style.color = '#0078d7';
-          if (audioBtn) {
-            audioBtn.classList.remove('loading');
-            audioBtn.classList.add('playing');
-            audioBtn.textContent = '▶️';
-          }
         };
         
         audio.onended = () => {
           kanjiEl.style.color = originalColor;
-          if (audioBtn) {
-            audioBtn.classList.remove('loading', 'playing');
-            audioBtn.textContent = '🔊';
-          }
+          isCurrentlyPlaying = false; // Reset the flag when audio ends
+          currentAudio = null; // Clear audio reference
           console.log('Google TTS audio finished');
         };
         
         audio.onerror = (error) => {
           console.error('Google TTS audio error:', error);
           kanjiEl.style.color = originalColor;
-          if (audioBtn) {
-            audioBtn.classList.remove('loading', 'playing');
-            audioBtn.textContent = '🔊';
-          }
+          isCurrentlyPlaying = false; // Reset the flag on error
+          currentAudio = null; // Clear audio reference
           
           // Fallback to browser speech synthesis
           if ('speechSynthesis' in window) {
@@ -168,6 +170,7 @@ async function speakKanji() {
             utterance.lang = 'ja-JP';
             utterance.onend = () => {
               kanjiEl.style.color = originalColor;
+              isCurrentlyPlaying = false; // Reset flag for fallback too
             };
             window.speechSynthesis.speak(utterance);
           }
@@ -181,13 +184,10 @@ async function speakKanji() {
         
         // Reset visual states
         const kanjiEl = document.getElementById("kanji-character");
-        const audioBtn = document.getElementById("play-audio");
         const originalColor = kanjiEl.style.color;
         kanjiEl.style.color = originalColor;
-        if (audioBtn) {
-          audioBtn.classList.remove('loading', 'playing');
-          audioBtn.textContent = '🔊';
-        }
+        isCurrentlyPlaying = false; // Reset the flag on error
+        currentAudio = null; // Clear audio reference
         
         // Fallback to browser speech synthesis
         if ('speechSynthesis' in window) {
@@ -196,6 +196,7 @@ async function speakKanji() {
           utterance.lang = 'ja-JP';
           utterance.onend = () => {
             kanjiEl.style.color = originalColor;
+            isCurrentlyPlaying = false; // Reset flag for fallback too
           };
           window.speechSynthesis.speak(utterance);
         } else {
@@ -225,9 +226,8 @@ document.getElementById("jlpt-level").addEventListener("change", function (e) {
   changeLevel(e.target.value);
 });
 
-// Add audio event listeners for both kanji character and audio button
+// Add audio event listener for kanji character click
 document.getElementById("kanji-character").addEventListener("click", speakKanji);
-document.getElementById("play-audio").addEventListener("click", speakKanji);
 
 // Initialize with a kanji
 changeLevel(currentLevel);

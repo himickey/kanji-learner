@@ -75,38 +75,6 @@ button:hover {
   background: #1565c0;
 }
 
-.audio-btn {
-  background: #4caf50;
-  border-radius: 50%;
-  width: 40px;
-  height: 40px;
-  padding: 0;
-  margin: 0 8px;
-  font-size: 18px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.3s ease;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-}
-
-.audio-btn:hover {
-  background: #45a049;
-  transform: scale(1.1);
-  box-shadow: 0 4px 8px rgba(0,0,0,0.3);
-}
-
-/* Add loading state for TTS */
-.audio-btn.loading {
-  background: #ff9800;
-  animation: pulse 1s infinite;
-}
-
-.audio-btn.playing {
-  background: #2196f3;
-  animation: pulse 1s infinite;
-}
-
 select {
   background: #fff;
   border: 2px solid #ddd;
