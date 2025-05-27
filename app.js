@@ -96,113 +96,146 @@ async function speakKanji(event) {
   // Prevent event bubbling to avoid double triggers
   if (event) {
     event.stopPropagation();
+    event.preventDefault();
   }
   
-  if (currentKanji && !isCurrentlyPlaying) {
-    isCurrentlyPlaying = true;
-    
-    // Stop any currently playing audio
-    if (currentAudio) {
-      currentAudio.pause();
-      currentAudio = null;
-    }
-    
-    // Handle different possible property names for readings
-    let reading = null;
-    
-    if (currentKanji.readings && currentKanji.readings.length > 0) {
-      reading = currentKanji.readings[0];
-    } else if (currentKanji.reading) {
-      reading = currentKanji.reading;
-    } else if (currentKanji.hiragana) {
-      reading = currentKanji.hiragana;
-    } else if (currentKanji.kana) {
-      reading = currentKanji.kana;
+  // Double-check to prevent duplicate calls
+  if (!currentKanji || isCurrentlyPlaying) {
+    console.log('Audio already playing or no kanji loaded, skipping...');
+    return;
+  }
+  
+  console.log('Starting audio playback for:', currentKanji);
+  isCurrentlyPlaying = true;
+  
+  // Stop any currently playing audio immediately
+  if (currentAudio) {
+    currentAudio.pause();
+    currentAudio.currentTime = 0;
+    currentAudio = null;
+  }
+  
+  // Cancel any ongoing speech synthesis
+  if ('speechSynthesis' in window) {
+    window.speechSynthesis.cancel();
+  }
+  
+  // Handle different possible property names for readings
+  let reading = null;
+  
+  if (currentKanji.readings && currentKanji.readings.length > 0) {
+    reading = currentKanji.readings[0];
+  } else if (currentKanji.reading) {
+    reading = currentKanji.reading;
+  } else if (currentKanji.hiragana) {
+    reading = currentKanji.hiragana;
+  } else if (currentKanji.kana) {
+    reading = currentKanji.kana;
+  } else {
+    // Fallback to the kanji/word itself
+    reading = currentKanji.kanji || currentKanji.word || currentKanji.character;
+  }
+  
+  if (!reading) {
+    console.warn('No reading found for kanji');
+    isCurrentlyPlaying = false;
+    return;
+  }
+  
+  console.log('Playing audio for reading:', reading);
+  
+  const kanjiEl = document.getElementById("kanji-character");
+  const originalColor = kanjiEl.style.color || '#000000';
+  
+  // Create cleanup function to reset state
+  const cleanup = () => {
+    kanjiEl.style.color = originalColor;
+    isCurrentlyPlaying = false;
+    currentAudio = null;
+    console.log('Audio playback cleanup completed');
+  };
+  
+  // Create fallback function to avoid duplication
+  const fallbackToSpeechSynthesis = (reason) => {
+    if ('speechSynthesis' in window && !isCurrentlyPlaying) {
+      console.log(`Falling back to browser speech synthesis: ${reason}`);
+      isCurrentlyPlaying = true; // Set flag again for fallback
+      
+      const utterance = new SpeechSynthesisUtterance(reading);
+      utterance.lang = 'ja-JP';
+      utterance.onend = () => {
+        console.log('Browser speech synthesis finished');
+        cleanup();
+      };
+      utterance.onerror = () => {
+        console.error('Browser speech synthesis failed');
+        cleanup();
+      };
+      
+      window.speechSynthesis.speak(utterance);
     } else {
-      // Fallback to the kanji/word itself
-      reading = currentKanji.kanji || currentKanji.word || currentKanji.character;
+      console.warn("Browser speech synthesis not available or already playing");
+      cleanup();
+    }
+  };
+  
+  try {
+    // Set loading state
+    kanjiEl.style.color = '#ff9800';
+    
+    // Use Google Translate's TTS service
+    const ttsUrl = `https://translate.google.com/translate_tts?ie=UTF-8&tl=ja&client=tw-ob&q=${encodeURIComponent(reading)}`;
+    
+    // Create audio element
+    const audio = new Audio(ttsUrl);
+    currentAudio = audio;
+    
+    // Track if error handler was already called to prevent duplicate fallbacks
+    let errorHandled = false;
+    
+    // Set up event handlers before attempting to play
+    audio.onloadstart = () => {
+      console.log('Loading Google TTS audio...');
+    };
+    
+    audio.oncanplay = () => {
+      console.log('Google TTS audio ready to play');
+      kanjiEl.style.color = '#0078d7';
+    };
+    
+    audio.onended = () => {
+      console.log('Google TTS audio finished normally');
+      cleanup();
+    };
+    
+    audio.onerror = (error) => {
+      if (errorHandled) return; // Prevent duplicate error handling
+      errorHandled = true;
+      
+      console.error('Google TTS audio error:', error);
+      cleanup();
+      fallbackToSpeechSynthesis('audio error');
+    };
+    
+    // Attempt to play the audio
+    const playPromise = audio.play();
+    
+    if (playPromise !== undefined) {
+      await playPromise;
+      console.log('Google TTS audio started playing');
     }
     
-    if (reading) {
-      try {
-        // Visual feedback that audio is loading/playing
-        const kanjiEl = document.getElementById("kanji-character");
-        const originalColor = kanjiEl.style.color;
-        
-        // Set loading state
-        kanjiEl.style.color = '#ff9800';
-        
-        // Use Google Translate's TTS service
-        const ttsUrl = `https://translate.google.com/translate_tts?ie=UTF-8&tl=ja&client=tw-ob&q=${encodeURIComponent(reading)}`;
-        
-        // Create and play audio element
-        const audio = new Audio(ttsUrl);
-        currentAudio = audio; // Store reference to current audio
-        
-        // Handle audio events
-        audio.onloadstart = () => {
-          console.log('Loading Google TTS audio...');
-        };
-        
-        audio.oncanplay = () => {
-          console.log('Google TTS audio ready to play');
-          // Set playing state
-          kanjiEl.style.color = '#0078d7';
-        };
-        
-        audio.onended = () => {
-          kanjiEl.style.color = originalColor;
-          isCurrentlyPlaying = false; // Reset the flag when audio ends
-          currentAudio = null; // Clear audio reference
-          console.log('Google TTS audio finished');
-        };
-        
-        audio.onerror = (error) => {
-          console.error('Google TTS audio error:', error);
-          kanjiEl.style.color = originalColor;
-          isCurrentlyPlaying = false; // Reset the flag on error
-          currentAudio = null; // Clear audio reference
-          
-          // Fallback to browser speech synthesis
-          if ('speechSynthesis' in window) {
-            console.log('Falling back to browser speech synthesis');
-            const utterance = new SpeechSynthesisUtterance(reading);
-            utterance.lang = 'ja-JP';
-            utterance.onend = () => {
-              kanjiEl.style.color = originalColor;
-              isCurrentlyPlaying = false; // Reset flag for fallback too
-            };
-            window.speechSynthesis.speak(utterance);
-          }
-        };
-        
-        // Play the audio
-        await audio.play();
-        
-      } catch (error) {
-        console.error('Failed to play Google TTS audio:', error);
-        
-        // Reset visual states
-        const kanjiEl = document.getElementById("kanji-character");
-        const originalColor = kanjiEl.style.color;
-        kanjiEl.style.color = originalColor;
-        isCurrentlyPlaying = false; // Reset the flag on error
-        currentAudio = null; // Clear audio reference
-        
-        // Fallback to browser speech synthesis
-        if ('speechSynthesis' in window) {
-          console.log('Falling back to browser speech synthesis');
-          const utterance = new SpeechSynthesisUtterance(reading);
-          utterance.lang = 'ja-JP';
-          utterance.onend = () => {
-            kanjiEl.style.color = originalColor;
-            isCurrentlyPlaying = false; // Reset flag for fallback too
-          };
-          window.speechSynthesis.speak(utterance);
-        } else {
-          console.warn("Neither Google TTS nor browser speech synthesis available");
-        }
-      }
+  } catch (error) {
+    console.error('Failed to play Google TTS audio:', error);
+    
+    // Only fallback if error handler hasn't already handled it
+    if (currentAudio && !currentAudio.error) {
+      cleanup();
+      fallbackToSpeechSynthesis('play promise error');
+    } else {
+      // Error handler already triggered fallback, just cleanup
+      console.log('Error already handled by audio.onerror, skipping duplicate fallback');
+      cleanup();
     }
   }
 }
