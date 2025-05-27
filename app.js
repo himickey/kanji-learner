@@ -247,45 +247,35 @@ async function speakKanji(event) {
     return;
   }
   
-  // For other browsers, try Google TTS first
+  // Try our local TTS proxy first, then fallback to Speech Synthesis API
   try {
     // Set loading state
     kanjiEl.style.color = '#ff9800';
     
-    // Use Google Translate's TTS service with Safari-compatible parameters
-    const ttsUrl = `https://translate.google.com/translate_tts?ie=UTF-8&tl=ja&client=tw-ob&q=${encodeURIComponent(reading)}&textlen=${reading.length}`;
+    // Use our local proxy to avoid CORS issues
+    const ttsUrl = `/api/tts?text=${encodeURIComponent(reading)}&lang=ja`;
     
-    // Create audio element with Safari-compatible settings
+    // Create audio element
     const audio = new Audio();
     currentAudio = audio;
     
-    // Set cross-origin attribute for Safari
-    audio.crossOrigin = "anonymous";
-    audio.preload = "auto";
-    
-    // Track if error handler was already called to prevent duplicate fallbacks
-    let errorHandled = false;
-    
     // Set up event handlers before setting src
     audio.onloadstart = () => {
-      console.log('Loading Google TTS audio...');
+      console.log('Loading TTS audio via proxy...');
     };
     
     audio.oncanplay = () => {
-      console.log('Google TTS audio ready to play');
+      console.log('TTS audio ready to play');
       kanjiEl.style.color = '#0078d7';
     };
     
     audio.onended = () => {
-      console.log('Google TTS audio finished normally');
+      console.log('TTS audio finished normally');
       cleanup();
     };
     
     audio.onerror = (error) => {
-      if (errorHandled) return;
-      errorHandled = true;
-      
-      console.error('Google TTS audio error:', error);
+      console.error('TTS proxy audio error:', error);
       console.log('Error details:', {
         code: audio.error?.code,
         message: audio.error?.message,
@@ -293,7 +283,7 @@ async function speakKanji(event) {
         readyState: audio.readyState
       });
       cleanup();
-      fallbackToSpeechSynthesis('Google TTS error');
+      fallbackToSpeechSynthesis('TTS proxy error');
     };
     
     // Set the source after event handlers are set up
@@ -304,20 +294,13 @@ async function speakKanji(event) {
     
     if (playPromise !== undefined) {
       await playPromise;
-      console.log('Google TTS audio started playing');
+      console.log('TTS audio started playing');
     }
     
   } catch (error) {
-    console.error('Failed to play Google TTS audio:', error);
-    
-    // Only fallback if error handler hasn't already handled it
-    if (currentAudio && !currentAudio.error) {
-      cleanup();
-      fallbackToSpeechSynthesis('Google TTS play error');
-    } else {
-      console.log('Error already handled by audio.onerror, skipping duplicate fallback');
-      cleanup();
-    }
+    console.error('Failed to play TTS audio:', error);
+    cleanup();
+    fallbackToSpeechSynthesis('TTS play error');
   }
 }
 
