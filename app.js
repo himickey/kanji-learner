@@ -92,6 +92,16 @@ function showMeaning() {
 let isCurrentlyPlaying = false; // Prevent multiple simultaneous audio playbacks
 let currentAudio = null; // Keep track of current audio instance
 
+// Detect Safari browser
+function isSafari() {
+  return /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+}
+
+// Detect if we're on iOS
+function isIOS() {
+  return /iPad|iPhone|iPod/.test(navigator.userAgent);
+}
+
 async function speakKanji(event) {
   // Prevent event bubbling to avoid double triggers
   if (event) {
@@ -106,6 +116,7 @@ async function speakKanji(event) {
   }
   
   console.log('Starting audio playback for:', currentKanji);
+  console.log('Browser info:', { safari: isSafari(), iOS: isIOS() });
   isCurrentlyPlaying = true;
   
   // Stop any currently playing audio immediately
@@ -131,6 +142,8 @@ async function speakKanji(event) {
     reading = currentKanji.hiragana;
   } else if (currentKanji.kana) {
     reading = currentKanji.kana;
+  } else if (currentKanji.furigana) {
+    reading = currentKanji.furigana;
   } else {
     // Fallback to the kanji/word itself
     reading = currentKanji.kanji || currentKanji.word || currentKanji.character;
@@ -155,45 +168,105 @@ async function speakKanji(event) {
     console.log('Audio playback cleanup completed');
   };
   
-  // Create fallback function to avoid duplication
+  // Enhanced fallback function with Safari support
   const fallbackToSpeechSynthesis = (reason) => {
     if ('speechSynthesis' in window && !isCurrentlyPlaying) {
       console.log(`Falling back to browser speech synthesis: ${reason}`);
-      isCurrentlyPlaying = true; // Set flag again for fallback
+      isCurrentlyPlaying = true;
       
-      const utterance = new SpeechSynthesisUtterance(reading);
-      utterance.lang = 'ja-JP';
-      utterance.onend = () => {
-        console.log('Browser speech synthesis finished');
-        cleanup();
-      };
-      utterance.onerror = () => {
-        console.error('Browser speech synthesis failed');
-        cleanup();
+      // Wait for voices to load (important for Safari)
+      const waitForVoices = () => {
+        return new Promise((resolve) => {
+          const voices = window.speechSynthesis.getVoices();
+          if (voices.length > 0) {
+            resolve(voices);
+          } else {
+            // Wait for voiceschanged event (Safari needs this)
+            window.speechSynthesis.onvoiceschanged = () => {
+              resolve(window.speechSynthesis.getVoices());
+            };
+          }
+        });
       };
       
-      window.speechSynthesis.speak(utterance);
+      waitForVoices().then((voices) => {
+        const utterance = new SpeechSynthesisUtterance(reading);
+        utterance.lang = 'ja-JP';
+        
+        // Find Japanese voice if available
+        const japaneseVoice = voices.find(voice => 
+          voice.lang.startsWith('ja') || voice.name.includes('Japanese')
+        );
+        
+        if (japaneseVoice) {
+          utterance.voice = japaneseVoice;
+          console.log('Using Japanese voice:', japaneseVoice.name);
+        } else {
+          console.log('No Japanese voice found, using default');
+        }
+        
+        // Safari-specific settings
+        utterance.rate = 0.8; // Slower rate for better comprehension
+        utterance.pitch = 1.0;
+        utterance.volume = 1.0;
+        
+        utterance.onstart = () => {
+          console.log('Browser speech synthesis started');
+          kanjiEl.style.color = '#0078d7';
+        };
+        
+        utterance.onend = () => {
+          console.log('Browser speech synthesis finished');
+          cleanup();
+        };
+        
+        utterance.onerror = (error) => {
+          console.error('Browser speech synthesis failed:', error);
+          cleanup();
+        };
+        
+        // Use try-catch for Safari compatibility
+        try {
+          window.speechSynthesis.speak(utterance);
+        } catch (error) {
+          console.error('Failed to start speech synthesis:', error);
+          cleanup();
+        }
+      });
     } else {
       console.warn("Browser speech synthesis not available or already playing");
       cleanup();
     }
   };
   
+  // For Safari and iOS, prefer Speech Synthesis API over external audio
+  if (isSafari() || isIOS()) {
+    console.log('Safari/iOS detected, using Speech Synthesis API directly');
+    kanjiEl.style.color = '#ff9800'; // Loading state
+    fallbackToSpeechSynthesis('Safari/iOS optimization');
+    return;
+  }
+  
+  // For other browsers, try Google TTS first
   try {
     // Set loading state
     kanjiEl.style.color = '#ff9800';
     
-    // Use Google Translate's TTS service
-    const ttsUrl = `https://translate.google.com/translate_tts?ie=UTF-8&tl=ja&client=tw-ob&q=${encodeURIComponent(reading)}`;
+    // Use Google Translate's TTS service with Safari-compatible parameters
+    const ttsUrl = `https://translate.google.com/translate_tts?ie=UTF-8&tl=ja&client=tw-ob&q=${encodeURIComponent(reading)}&textlen=${reading.length}`;
     
-    // Create audio element
-    const audio = new Audio(ttsUrl);
+    // Create audio element with Safari-compatible settings
+    const audio = new Audio();
     currentAudio = audio;
+    
+    // Set cross-origin attribute for Safari
+    audio.crossOrigin = "anonymous";
+    audio.preload = "auto";
     
     // Track if error handler was already called to prevent duplicate fallbacks
     let errorHandled = false;
     
-    // Set up event handlers before attempting to play
+    // Set up event handlers before setting src
     audio.onloadstart = () => {
       console.log('Loading Google TTS audio...');
     };
@@ -209,13 +282,22 @@ async function speakKanji(event) {
     };
     
     audio.onerror = (error) => {
-      if (errorHandled) return; // Prevent duplicate error handling
+      if (errorHandled) return;
       errorHandled = true;
       
       console.error('Google TTS audio error:', error);
+      console.log('Error details:', {
+        code: audio.error?.code,
+        message: audio.error?.message,
+        networkState: audio.networkState,
+        readyState: audio.readyState
+      });
       cleanup();
-      fallbackToSpeechSynthesis('audio error');
+      fallbackToSpeechSynthesis('Google TTS error');
     };
+    
+    // Set the source after event handlers are set up
+    audio.src = ttsUrl;
     
     // Attempt to play the audio
     const playPromise = audio.play();
@@ -231,9 +313,8 @@ async function speakKanji(event) {
     // Only fallback if error handler hasn't already handled it
     if (currentAudio && !currentAudio.error) {
       cleanup();
-      fallbackToSpeechSynthesis('play promise error');
+      fallbackToSpeechSynthesis('Google TTS play error');
     } else {
-      // Error handler already triggered fallback, just cleanup
       console.log('Error already handled by audio.onerror, skipping duplicate fallback');
       cleanup();
     }
