@@ -80,14 +80,6 @@ function toggleMeaning() {
   }
 }
 
-function showMeaning() {
-  if (currentKanji && currentKanji.character !== "Error") {
-    // Handle different possible property names from the API
-    const meaning = currentKanji.meaning || currentKanji.meanings || currentKanji.definition || "No meaning available";
-    document.getElementById("kanji-meaning").textContent = meaning;
-  }
-}
-
 // Function to speak the kanji reading aloud using Google Text-to-Speech
 let isCurrentlyPlaying = false; // Prevent multiple simultaneous audio playbacks
 let currentAudio = null; // Keep track of current audio instance

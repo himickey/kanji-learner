@@ -21,7 +21,6 @@
   },
   "homepage": "https://github.com/himickey/kanji-learner#readme",
   "dependencies": {
-    "express": "^5.1.0",
-    "jlpt-vocab-api": "github:wkei/jlpt-vocab-api"
+    "express": "^5.1.0"
   }
 }
