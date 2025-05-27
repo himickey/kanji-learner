@@ -28,6 +28,28 @@ h1 {
   font-size: 64px;
   margin-bottom: 16px;
   color: #1a237e;
+  transition: transform 0.2s ease, color 0.2s ease;
+  cursor: pointer;
+  min-height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#kanji-character:hover {
+  transform: scale(1.05);
+  color: #0078d7;
+}
+
+/* Loading animation */
+#kanji-character:contains("Loading") {
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.5; }
+  100% { opacity: 1; }
 }
 
 #kanji-meaning {
@@ -53,14 +75,41 @@ button:hover {
   background: #1565c0;
 }
 
-kanji-learner/styles.css
-/* Add these styles to your existing CSS file */
-#kanji-character {
-  transition: transform 0.2s ease, color 0.2s ease;
-  cursor: pointer;
+.audio-btn {
+  background: #4caf50;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  margin: 0 8px;
+  font-size: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
-#kanji-character:hover {
-  transform: scale(1.05);
-  color: #0078d7;
+.audio-btn:hover {
+  background: #45a049;
+}
+
+select {
+  background: #fff;
+  border: 2px solid #ddd;
+  border-radius: 5px;
+  padding: 8px 12px;
+  font-size: 16px;
+  margin-bottom: 20px;
+  color: #333;
+}
+
+select:focus {
+  outline: none;
+  border-color: #1976d2;
+}
+
+label {
+  display: block;
+  margin-bottom: 8px;
+  color: #333;
+  font-weight: 500;
 }

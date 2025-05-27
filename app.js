@@ -1,25 +1,48 @@
 let currentKanji = null;
 let currentLevel = "N5";
-let currentKanjiList = [];
 
-function getRandomKanji() {
-  if (currentKanjiList.length === 0) {
+// Map JLPT levels to API numeric values
+const levelMapping = {
+  "N5": "5",
+  "N4": "4", 
+  "N3": "3",
+  "N2": "2",
+  "N1": "1"
+};
+
+// Function to fetch a random kanji from the API
+async function getRandomKanji() {
+  try {
+    const apiLevel = levelMapping[currentLevel] || "5";
+    const response = await fetch(`https://jlpt-vocab-api-khaki.vercel.app/api/words/random?level=${apiLevel}`);
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Failed to fetch kanji data:", error);
     return null;
   }
-  const idx = Math.floor(Math.random() * currentKanjiList.length);
-  return currentKanjiList[idx];
 }
 
-function showKanji() {
-  currentKanji = getRandomKanji();
+async function showKanji() {
+  document.getElementById("kanji-character").textContent = "Loading...";
+  document.getElementById("kanji-meaning").textContent = "";
+  
+  currentKanji = await getRandomKanji();
 
   if (currentKanji === null) {
     document.getElementById("kanji-character").textContent = "Error";
-    document.getElementById("kanji-meaning").textContent = "No Kanji found for this level, or failed to load data.";
+    document.getElementById("kanji-meaning").textContent = "Failed to load kanji data.";
   } else {
     // Make the kanji character clickable for audio
     const kanjiCharEl = document.getElementById("kanji-character");
-    kanjiCharEl.textContent = currentKanji.character;
+    // Use the kanji property or word property depending on API response structure
+    const kanjiText = currentKanji.kanji || currentKanji.word || currentKanji.character || "?";
+    kanjiCharEl.textContent = kanjiText;
     kanjiCharEl.title = "Click to hear pronunciation";
     kanjiCharEl.style.cursor = "pointer";
     
@@ -28,35 +51,53 @@ function showKanji() {
 }
 
 function showMeaning() {
-  if (currentKanji && currentKanji.meaning && currentKanji.character !== "Error") {
-    document.getElementById("kanji-meaning").textContent = currentKanji.meaning;
+  if (currentKanji && currentKanji.character !== "Error") {
+    // Handle different possible property names from the API
+    const meaning = currentKanji.meaning || currentKanji.meanings || currentKanji.definition || "No meaning available";
+    document.getElementById("kanji-meaning").textContent = meaning;
   }
 }
 
 // Function to speak the kanji reading aloud
 function speakKanji() {
-  if (currentKanji && currentKanji.readings && currentKanji.readings.length > 0) {
-    const reading = currentKanji.readings[0]; // Use the first available reading
+  if (currentKanji) {
+    // Handle different possible property names for readings
+    let reading = null;
     
-    // Check if speech synthesis is available
-    if ('speechSynthesis' in window) {
-      // Create a new speech synthesis utterance
-      const utterance = new SpeechSynthesisUtterance(reading);
-      utterance.lang = 'ja-JP'; // Set language to Japanese
-      
-      // Speak the utterance
-      window.speechSynthesis.speak(utterance);
-      
-      // Visual feedback that audio is playing
-      const kanjiEl = document.getElementById("kanji-character");
-      const originalColor = kanjiEl.style.color;
-      kanjiEl.style.color = '#0078d7';
-      
-      utterance.onend = () => {
-        kanjiEl.style.color = originalColor;
-      };
+    if (currentKanji.readings && currentKanji.readings.length > 0) {
+      reading = currentKanji.readings[0];
+    } else if (currentKanji.reading) {
+      reading = currentKanji.reading;
+    } else if (currentKanji.hiragana) {
+      reading = currentKanji.hiragana;
+    } else if (currentKanji.kana) {
+      reading = currentKanji.kana;
     } else {
-      console.warn("Speech synthesis not supported in this browser");
+      // Fallback to the kanji/word itself
+      reading = currentKanji.kanji || currentKanji.word || currentKanji.character;
+    }
+    
+    if (reading) {
+      // Check if speech synthesis is available
+      if ('speechSynthesis' in window) {
+        // Create a new speech synthesis utterance
+        const utterance = new SpeechSynthesisUtterance(reading);
+        utterance.lang = 'ja-JP'; // Set language to Japanese
+        
+        // Speak the utterance
+        window.speechSynthesis.speak(utterance);
+        
+        // Visual feedback that audio is playing
+        const kanjiEl = document.getElementById("kanji-character");
+        const originalColor = kanjiEl.style.color;
+        kanjiEl.style.color = '#0078d7';
+        
+        utterance.onend = () => {
+          kanjiEl.style.color = originalColor;
+        };
+      } else {
+        console.warn("Speech synthesis not supported in this browser");
+      }
     }
   }
 }
@@ -66,24 +107,7 @@ async function changeLevel(level) {
   document.getElementById("kanji-character").textContent = "Loading...";
   document.getElementById("kanji-meaning").textContent = "";
 
-  try {
-    // This relative URL will work in both development and production
-    // - In local dev: it will call http://localhost:{port}/api/kanji?level={level}
-    // - In production: it will call https://your-vercel-domain.com/api/kanji?level={level}
-    const response = await fetch(`/api/kanji?level=${level}`);
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    currentKanjiList = await response.json();
-    if (currentKanjiList.length === 0) {
-        console.warn(`No Kanji found for level ${level}. Displaying message.`);
-        // Keep currentKanjiList as empty array
-    }
-  } catch (error) {
-    console.error("Failed to fetch kanji data:", error);
-    currentKanjiList = []; // Ensure list is empty on error
-    // Error is handled in showKanji
-  }
+  // No need to pre-fetch data since we get random kanji on demand
   showKanji();
 }
 
