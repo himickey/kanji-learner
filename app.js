@@ -170,9 +170,13 @@ async function speakKanji(event) {
   
   // Enhanced fallback function with Safari support
   const fallbackToSpeechSynthesis = (reason) => {
-    if ('speechSynthesis' in window && !isCurrentlyPlaying) {
+    if ('speechSynthesis' in window) {
       console.log(`Falling back to browser speech synthesis: ${reason}`);
-      isCurrentlyPlaying = true;
+      
+      // Ensure we're not blocked by the isCurrentlyPlaying flag
+      if (!isCurrentlyPlaying) {
+        isCurrentlyPlaying = true;
+      }
       
       // Wait for voices to load (important for Safari)
       const waitForVoices = () => {
@@ -185,6 +189,11 @@ async function speakKanji(event) {
             window.speechSynthesis.onvoiceschanged = () => {
               resolve(window.speechSynthesis.getVoices());
             };
+            
+            // Timeout after 5 seconds if voices don't load
+            setTimeout(() => {
+              resolve(window.speechSynthesis.getVoices());
+            }, 5000);
           }
         });
       };
@@ -202,7 +211,7 @@ async function speakKanji(event) {
           utterance.voice = japaneseVoice;
           console.log('Using Japanese voice:', japaneseVoice.name);
         } else {
-          console.log('No Japanese voice found, using default');
+          console.log('No Japanese voice found, using default. Available voices:', voices.length);
         }
         
         // Safari-specific settings
@@ -232,9 +241,12 @@ async function speakKanji(event) {
           console.error('Failed to start speech synthesis:', error);
           cleanup();
         }
+      }).catch((error) => {
+        console.error('Failed to load voices:', error);
+        cleanup();
       });
     } else {
-      console.warn("Browser speech synthesis not available or already playing");
+      console.warn("Browser speech synthesis not available");
       cleanup();
     }
   };
@@ -243,6 +255,8 @@ async function speakKanji(event) {
   if (isSafari() || isIOS()) {
     console.log('Safari/iOS detected, using Speech Synthesis API directly');
     kanjiEl.style.color = '#ff9800'; // Loading state
+    // Reset the flag before calling fallback for Safari/iOS direct usage
+    isCurrentlyPlaying = false;
     fallbackToSpeechSynthesis('Safari/iOS optimization');
     return;
   }
