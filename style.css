@@ -111,7 +111,7 @@ label {
 
 #hiragana-text {
   font-size: 24px;
-  color: white;
+    color: #7dd3fc;
   margin-bottom: 10px;
   min-height: 30px; /* To maintain spacing */
 }
