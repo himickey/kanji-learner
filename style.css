@@ -8,26 +8,29 @@ body {
 .container {
   max-width: 400px;
   margin: 40px auto;
-  background: #fff;
+  background: rgb(27, 37, 57);
   border-radius: 10px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
   padding: 32px 24px;
   text-align: center;
+  color:rgb(255, 255, 255);
+  
 }
 
 h1 {
   margin-bottom: 24px;
-  color: #2d3a4b;
+  color: rgb(56, 189,249)
 }
 
 #kanji-card {
   margin-top: 20px;
+  color:white;
 }
 
 #kanji-character {
   font-size: 64px;
   margin-bottom: 16px;
-  color: #1a237e;
+  color: white;
   transition: transform 0.2s ease, color 0.2s ease;
   cursor: pointer;
   min-height: 80px;
@@ -38,7 +41,7 @@ h1 {
 
 #kanji-character:hover {
   transform: scale(1.05);
-  color: #0078d7;
+  color: orange;
 }
 
 /* Loading animation */
@@ -75,12 +78,21 @@ button:hover {
   background: #1565c0;
 }
 
+#show-answer {
+  background: rgb(0, 132,199);
+}
+
+#next-kanji {
+  background: rgb(23, 163, 74);
+}
+
+
 select {
   background: #fff;
   border: 2px solid #ddd;
   border-radius: 5px;
   padding: 8px 12px;
-  font-size: 16px;
+  font-size: 12px;
   margin-bottom: 20px;
   color: #333;
 }
@@ -93,13 +105,13 @@ select:focus {
 label {
   display: block;
   margin-bottom: 8px;
-  color: #333;
+  color: white;
   font-weight: 500;
 }
 
 #hiragana-text {
   font-size: 24px;
-  color: #555;
+  color: white;
   margin-bottom: 10px;
   min-height: 30px; /* To maintain spacing */
 }
