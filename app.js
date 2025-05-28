@@ -32,6 +32,7 @@ async function getRandomKanji() {
 async function showKanji() {
   document.getElementById("kanji-character").textContent = "Loading...";
   document.getElementById("kanji-meaning").textContent = "";
+  document.getElementById("hiragana-text").textContent = "Loading..."; // Added this line
   
   currentKanji = await getRandomKanji();
 
@@ -46,6 +47,27 @@ async function showKanji() {
     kanjiCharEl.textContent = kanjiText;
     kanjiCharEl.title = "Click to hear pronunciation";
     kanjiCharEl.style.cursor = "pointer";
+
+    // Populate Hiragana reading
+    let hiraganaReading = null;
+    if (currentKanji.readings && currentKanji.readings.length > 0) {
+      hiraganaReading = currentKanji.readings[0];
+    } else if (currentKanji.reading) {
+      hiraganaReading = currentKanji.reading;
+    } else if (currentKanji.hiragana) {
+      hiraganaReading = currentKanji.hiragana;
+    } else if (currentKanji.kana) {
+      hiraganaReading = currentKanji.kana;
+    } else if (currentKanji.furigana) {
+      hiraganaReading = currentKanji.furigana;
+    }
+
+    const hiraganaTextEl = document.getElementById("hiragana-text");
+    if (hiraganaReading) {
+      hiraganaTextEl.textContent = hiraganaReading;
+    } else {
+      hiraganaTextEl.textContent = "-";
+    }
     
     // If meaning was visible before, show it for the new kanji too
     if (isMeaningVisible) {
