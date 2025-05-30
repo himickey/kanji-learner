@@ -172,7 +172,7 @@ async function speakKanji(event) {
   console.log('Playing audio for reading:', reading);
   
   const kanjiEl = document.getElementById("kanji-character");
-  const originalColor = kanjiEl.style.color || '#000000';
+  const originalColor = kanjiEl.style.color || '#ffffff';
   
   // Create cleanup function to reset state
   const cleanup = () => {
